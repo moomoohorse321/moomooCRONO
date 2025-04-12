@@ -1,3 +1,9 @@
+/**
+ * Discussion:
+ * 1. They need to support File I/O if possible
+ * 2. They must ensure multi-threading is possible.
+ * 3. Hardware opportunities: voltage, OoO processor, number of processor -> impact on accuracy
+ */
 #include <cstdio>
 #include <cstdlib>
 #include <pthread.h>
@@ -6,9 +12,22 @@
 #include <sys/timeb.h>
 #include <string.h>
 
+
 #define MAX            100000000
 #define INT_MAX        100000000
 #define BILLION 1E9
+
+#ifndef NUM_ITERATIONS
+#define NUM_ITERATIONS 10000
+#endif
+
+#ifndef LOOP_SKIP
+#define LOOP_SKIP 1
+#endif
+
+#ifndef SKIP_SYNC
+#define SKIP_SYNC 0
+#endif
 
 //Thread Structure
 typedef struct
@@ -70,7 +89,7 @@ void* do_work(void* args)
    int i_stop  = stop_d;// (tid+1) * N / (arg->P);
 
    //Pagerank iteration count
-   int iterations = 1;
+   int iterations = NUM_ITERATIONS;
 
    //Barrier before starting work
    pthread_barrier_wait(arg->barrier);
@@ -79,7 +98,8 @@ void* do_work(void* args)
    {
       if(tid==0)
          dp=0;
-      pthread_barrier_wait(arg->barrier);
+      if (!SKIP_SYNC)
+         pthread_barrier_wait(arg->barrier);
 
       //for no outlinks, dangling pages calculation
       for(v=i_start;v<i_stop;v++)
@@ -90,35 +110,54 @@ void* do_work(void* args)
             //printf("\n %f %f %f %f",dp,d,D[uu],N_real);
          }
       }
-      pthread_mutex_lock(&lock);
+      #if (!SKIP_SYNC)
+         pthread_mutex_lock(&lock);
+      #endif 
       dp = dp + dp_tid[tid];
-      pthread_mutex_unlock(&lock);
+      #if (!SKIP_SYNC)
+         pthread_mutex_unlock(&lock);
+      #endif
       //printf("\n Outlinks Done %f",dp);
-
-      pthread_barrier_wait(arg->barrier);
-
+      #if (!SKIP_SYNC)
+         pthread_barrier_wait(arg->barrier);
+      #endif
       v=0;
-
+      #if(LOOP_SKIP>1)
+         int _skip = rand() % LOOP_SKIP + 1;
+         int _start = rand() % _skip;
+      #else
+         int _skip = 1;
+         int _start = 0;
+      #endif
       //Calculate Pageranks
-      for(v=i_start;v<i_stop;v++)
+      for(v=i_start + _start;v<i_stop;v+=_skip)
       {
          if(exist[v]==1)   //if vertex exists
          {
             pgtmp[v] = r;//dp + (r)/N_real;     //dangling pointer usage commented out
             //printf("\n pgtmp:%f test:%d",pgtmp[uu],test[uu]);
-            for(int j=0;j<test[v];j++)
+            #if(LOOP_SKIP>1)
+               int __skip = rand() % LOOP_SKIP + 1;
+               int __start = rand() % __skip;
+            #else
+               int __skip = 1;
+               int __start = 0;
+            #endif
+            for(int j=__start;j<test[v];j+=__skip)
             {
                //if inlink
                //printf("\nuu:%d id:%d",uu,W_index[uu][j]);
                pgtmp[v] = pgtmp[v] + (d*PR[W_index[v][j]]/outlinks[W_index[v][j]]);  //replace d with dp if dangling PRs required
             }
          }
-				 if(pgtmp[v]>=1.0)
-					 pgtmp[v] = 1.0;
+         if(pgtmp[v]>=1.0)
+            pgtmp[v] = 1.0;
       }
       //printf("\n Ranks done");
 
-      pthread_barrier_wait(arg->barrier);
+      #if (!SKIP_SYNC)
+         pthread_barrier_wait(arg->barrier);
+      #endif
 
       //Put temporary pageranks into final pageranks
       for(v=i_start;v<i_stop;v++)
@@ -129,8 +168,9 @@ void* do_work(void* args)
             //printf("\n %f",D[uu]);
          }
       }
-
+      
       pthread_barrier_wait(arg->barrier);
+
       iterations--;
    }
 
@@ -317,7 +357,7 @@ int main(int argc, char** argv)
         if (test1[i]==1) 
         nodecount++;
         }*/
-      printf("\nLargest Vertex: %d",nodecount);
+      // printf("\nLargest Vertex: %d",nodecount);
       N = nodecount;
    }
 
@@ -356,7 +396,7 @@ int main(int argc, char** argv)
 
    //Initialize PageRanks
    initialize_single_source(PR, Q, 0, N, 0.15);
-   printf("\nInitialization Done");
+   // printf("\nInitialization Done");
 
    //Thread arguments
    for(int j = 0; j < P; j++) {
@@ -405,14 +445,14 @@ int main(int argc, char** argv)
    //printf("\ndistance:%d \n",D[N-1]);
 
    //Print pageranks to file
-   FILE *f1 = fopen("file.txt", "w");
+   // FILE *f1 = fopen("file.txt", "w");
 
    for(int i = 0; i < N; i++) {
       if(exist[i]==1)
-         fprintf(f1,"pr(%d) = %f\n", i,PR[i]);
+         printf("pr(%d) = %f\n", i,PR[i]);
    }
    printf("\n");
-   fclose(f1);
+   // fclose(f1);
 
    return 0;
 }

@@ -1,0 +1,5 @@
+NUM_ITERATIONS = 64     # int, valid range: 0 to 100000
+LOOP_SKIP = 512     # int, valid range: 1 to 10
+SKIP_SYNC = 64     # int, valid range: 0 to 1
+worker_threads = 1     # int, valid range: 0 to 12
+
