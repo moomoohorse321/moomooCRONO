@@ -12,6 +12,7 @@ import tempfile
 from builtins import range
 from pprint import pprint
 from accuracy import get_gt, compute_similarity, parse_pr_data
+from dump import dump_data_to_csv
 
 
 import opentuner
@@ -100,6 +101,7 @@ class PetaBricksInterface(MeasurementInterface):
             else:
                 # time will be 2**31 if timeout
                 result.state = 'TIMEOUT'
+            dump_data_to_csv(result.accuracy, result.time, desired_result.configuration.data, "pagerank.csv")
         except:
             log.warning("program crash, out = %s / err = %s", out, err)
             result.state = 'ERROR'
@@ -137,11 +139,11 @@ class PetaBricksInterface(MeasurementInterface):
             # log.debug("param %s %f %f", k, minval, maxval)
 
             if k == 'worker_threads':
-                manipulator.add_parameter(IntegerParameter(k, 1, 16))
+                manipulator.add_parameter(IntegerParameter(k, 1, 4))
             elif k == 'distributedcutoff':
                 pass
             elif minval == 0 and maxval < 64:
-                manipulator.add_parameter(SwitchParameter(k, maxval))
+                manipulator.add_parameter(SwitchParameter(k, maxval + 1))
             else:
                 manipulator.add_parameter(LogIntegerParameter(k, minval, maxval))
 
