@@ -1,6 +1,18 @@
 
-CRONO v0.9 : A Benchmark Suite for Multithreaded Graph Algorithms Executing on Futuristic Multicores
+moomooCRONO
 ====================================================================
+
+## Build
+
+* Step 1: install opentuner https://github.com/jansel/opentuner 
+
+* Step 2: run a benchmark
+```bash 
+cd apps
+cd pagerank
+python config.py
+```
+
 
 [![build status](https://travis-ci.org/masabahmad/CRONO.svg?branch=master)](https://travis-ci.org/masabahmad/CRONO)
 
